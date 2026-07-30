@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客户开发 CRM</title>
+<style>
+  :root{
+    --paper: #F3F1EC;
+    --panel: #FFFFFF;
+    --ink: #22282A;
+    --ink-soft: #5B6462;
+    --ink-faint: #8A928F;
+    --line: #DCDCD3;
+    --teal: #33565A;
+    --teal-deep: #223E42;
+    --teal-soft: #DCE7E6;
+    --copper: #B5602E;
+    --copper-soft: #F0DBC9;
+    --amber: #A8791B;
+    --amber-soft: #F1E5C6;
+    --gray-soft: #E7E6E1;
+    --red: #A83232;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: -1px -1px;
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding: 28px 16px 60px;
+  }
+  .wrap{ max-width: 1180px; margin:0 auto; }
+
+  .header{
+    background:var(--panel); border:1px solid var(--line); border-radius: 4px;
+    padding: 22px 26px 20px; position:relative; margin-bottom: 16px;
+    display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px;
+  }
+  .corner{ position:absolute; width:14px; height:14px; }
+  .corner::before, .corner::after{ content:""; position:absolute; background:var(--copper); }
+  .corner.tl{ top:-1px; left:-1px; } .corner.tr{ top:-1px; right:-1px; }
+  .corner.bl{ bottom:-1px; left:-1px; } .corner.br{ bottom:-1px; right:-1px; }
+  .corner::before{ width:14px; height:2px; } .corner::after{ width:2px; height:14px; }
+  .eyebrow{ font-family:var(--mono); font-size: 11px; letter-spacing: 0.14em; color: var(--copper); text-transform: uppercase; margin: 0 0 6px; }
+  h1{ font-size: 24px; margin: 0 0 4px; letter-spacing: -0.01em; color: var(--teal-deep); }
+  .sub{ color: var(--ink-soft); font-size: 13.5px; margin: 0; }
+  .stats{ display:flex; gap:16px; font-family:var(--mono); font-size:12.5px; color:var(--ink-soft); }
+  .stats b{ color:var(--teal-deep); font-size:15px; }
+
+  .toolbar{
+    background:var(--panel); border:1px solid var(--line); border-radius:4px;
+    padding: 14px 18px; margin-bottom: 16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+  }
+  .toolbar input[type=text], .toolbar select{
+    padding: 8px 10px; font-size:13px; border:1px solid var(--line); border-radius:3px;
+    background:#FBFAF7; font-family:var(--sans); color:var(--ink);
+  }
+  .toolbar input[type=text]{ flex:1; min-width:160px; }
+  .toolbar select{ cursor:pointer; }
+  .btn{
+    padding: 8px 16px; border-radius:3px; font-size:13px; font-weight:600; cursor:pointer;
+    font-family:var(--sans); border:1px solid var(--line); background:#FBFAF7; color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .btn:hover{ border-color:var(--teal); color:var(--teal); }
+  .btn-primary{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  .btn-primary:hover{ background:var(--teal-deep); border-color:var(--teal-deep); color:#fff; }
+  .btn-ghost{ background:transparent; }
+
+  .layout{ display:grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items:start; }
+  @media (max-width:900px){ .layout{ grid-template-columns: 1fr; } }
+
+  .panel{ background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow:hidden; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  thead th{
+    text-align:left; padding:10px 12px; background:var(--paper); color:var(--ink-soft);
+    font-size:11.5px; letter-spacing:0.04em; text-transform:uppercase; font-family:var(--mono);
+    border-bottom:1px solid var(--line);
+  }
+  tbody td{ padding:11px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tbody tr{ cursor:pointer; transition:background 0.1s; }
+  tbody tr:hover{ background: var(--paper); }
+  tbody tr.selected{ background: var(--teal-soft); }
+  tbody tr:last-child td{ border-bottom:none; }
+  .name-cell{ font-weight:600; color:var(--teal-deep); }
+  .name-cell .company{ font-weight:400; color:var(--ink-faint); font-size:11.5px; display:block; }
+
+  .badge{ display:inline-block; padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
+  .badge.high{ background:var(--copper-soft); color:var(--copper); }
+  .badge.medium{ background:var(--amber-soft); color:var(--amber); }
+  .badge.low{ background:var(--gray-soft); color:var(--ink-soft); }
+  .overdue-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--red); margin-right:5px; vertical-align:middle; }
+
+  .empty-state{ padding: 50px 20px; text-align:center; color:var(--ink-soft); font-size:13.5px; }
+
+  /* ---- detail panel ---- */
+  .detail-panel{ padding: 20px 22px; min-height: 300px; }
+  .detail-placeholder{ padding:60px 20px; text-align:center; color:var(--ink-soft); font-size:13.5px; border:1px dashed var(--line); border-radius:4px; }
+  .detail-header{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+  .detail-title{ font-size:17px; font-weight:700; color:var(--teal-deep); margin:0 0 3px; }
+  .detail-company{ font-size:13px; color:var(--ink-faint); margin:0; }
+  .detail-actions{ display:flex; gap:6px; }
+  .icon-btn{
+    padding:5px 10px; font-size:12px; border-radius:3px; cursor:pointer; border:1px solid var(--line);
+    background:#FBFAF7; color:var(--ink-soft); font-family:var(--sans);
+  }
+  .icon-btn:hover{ border-color:var(--teal); color:var(--teal); }
+  .icon-btn.danger:hover{ border-color:var(--red); color:var(--red); }
+
+  .info-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 14px 0 18px; padding:14px; background:var(--paper); border-radius:4px; font-size:13px; }
+  .info-grid .k{ color:var(--ink-faint); font-size:11.5px; }
+  .info-grid .v{ color:var(--ink); font-family:var(--mono); font-size:12.5px; }
+
+  .followup-section-title{
+    font-size:12.5px; font-weight:700; color:var(--teal-deep); letter-spacing:0.03em; margin:18px 0 10px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .followup-section-title::after{ content:""; flex:1; height:1px; background:var(--line); }
+
+  .followup-form{ display:flex; flex-direction:column; gap:8px; margin-bottom:16px; padding:14px; border:1px dashed var(--line); border-radius:4px; }
+  .followup-form-row{ display:flex; gap:8px; }
+  .followup-form-row input[type=date]{ padding:8px; font-size:12.5px; border:1px solid var(--line); border-radius:3px; font-family:var(--mono); background:#FBFAF7; }
+  .followup-form textarea{ width:100%; padding:8px 10px; font-size:13px; border:1px solid var(--line); border-radius:3px; font-family:var(--sans); resize:vertical; background:#FBFAF7; }
+  .followup-form label{ font-size:11.5px; color:var(--ink-soft); }
+
+  .followup-list{ display:flex; flex-direction:column; gap:10px; max-height:280px; overflow-y:auto; }
+  .followup-item{ padding:10px 12px; background:var(--paper); border-left:2px solid var(--teal); border-radius:2px; }
+  .followup-date{ font-family:var(--mono); font-size:11.5px; color:var(--teal); font-weight:600; }
+  .followup-next{ font-family:var(--mono); font-size:11px; color:var(--copper); margin-left:8px; }
+  .followup-note{ font-size:13px; color:var(--ink); margin-top:4px; line-height:1.5; }
+  .followup-empty{ color:var(--ink-faint); font-size:12.5px; padding:10px 0; }
+
+  /* ---- modal ---- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(34,40,42,0.45); display:none;
+    align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--panel); border-radius:6px; padding:26px 28px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; }
+  .modal h2{ font-size:18px; color:var(--teal-deep); margin:0 0 18px; }
+  .field{ margin-bottom:13px; }
+  .field-label{ font-size:12px; color:var(--ink-soft); margin-bottom:4px; display:block; }
+  .field input[type=text], .field select{
+    width:100%; padding:9px 10px; font-size:13.5px; border:1px solid var(--line); border-radius:3px;
+    background:#FBFAF7; font-family:var(--sans);
+  }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .radio-row{ display:flex; gap:8px; }
+  .radio-chip{ flex:1; text-align:center; padding:8px; border:1px solid var(--line); border-radius:3px; font-size:13px; cursor:pointer; color:var(--ink-soft); }
+  .radio-chip.active.high{ background:var(--copper-soft); border-color:var(--copper); color:var(--copper); font-weight:600; }
+  .radio-chip.active.medium{ background:var(--amber-soft); border-color:var(--amber); color:var(--amber); font-weight:600; }
+  .radio-chip.active.low{ background:var(--gray-soft); border-color:var(--ink-faint); color:var(--ink-soft); font-weight:600; }
+  .modal-footer{ display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+
+  .footnote{ text-align:center; font-size: 11.5px; color: var(--ink-soft); margin-top: 18px; font-family: var(--mono); letter-spacing:0.02em; }
+  #import-file{ display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+    <div>
+      <p class="eyebrow">Customer Development CRM</p>
+      <h1>客户开发 CRM</h1>
+      <p class="sub">记录客户信息与跟进进度 — 数据仅保存在本次浏览器会话中，请用"导出备份"保存</p>
+    </div>
+    <div class="stats">
+      <div>总客户 <b id="stat-total">0</b></div>
+      <div>意向大 <b id="stat-high">0</b></div>
+      <div>待跟进 <b id="stat-overdue">0</b></div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="搜索姓名 / 公司..." oninput="renderTable()">
+    <select id="filter-type" onchange="renderTable()">
+      <option value="">全部类型</option>
+      <option value="贸易商/进口商">贸易商/进口商</option>
+      <option value="生产厂家">生产厂家</option>
+      <option value="经销商/批发商">经销商/批发商</option>
+      <option value="家具厂/工厂直采">家具厂/工厂直采</option>
+      <option value="其他">其他</option>
+    </select>
+    <select id="filter-intent" onchange="renderTable()">
+      <option value="">全部意向</option>
+      <option value="high">大</option>
+      <option value="medium">中</option>
+      <option value="low">小</option>
+    </select>
+    <button class="btn btn-primary" onclick="openAddModal()">+ 新增客户</button>
+    <button class="btn" onclick="exportData()">导出备份</button>
+    <button class="btn" onclick="document.getElementById('import-file').click()">导入备份</button>
+    <input type="file" id="import-file" accept=".json" onchange="importData(event)">
+  </div>
+
+  <div class="layout">
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th>姓名 / 公司</th>
+            <th>国籍</th>
+            <th>来源</th>
+            <th>类型</th>
+            <th>意向</th>
+            <th>最近跟进</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state" style="display:none;">暂无客户，点击右上角"+ 新增客户"开始记录</div>
+    </div>
+
+    <div class="panel detail-panel" id="detail-panel">
+      <div class="detail-placeholder">点击左侧客户查看详情和跟进记录</div>
+    </div>
+  </div>
+
+  <p class="footnote">数据保存在浏览器内存中，关闭页面前请点击"导出备份"保存 JSON 文件；下次使用点击"导入备份"恢复</p>
+</div>
+
+<!-- ===== Add/Edit Modal ===== -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-title">新增客户</h2>
+    <div class="field">
+      <span class="field-label">客户姓名 *</span>
+      <input type="text" id="m-name" placeholder="例如 John Smith">
+    </div>
+    <div class="field">
+      <span class="field-label">公司名称</span>
+      <input type="text" id="m-company" placeholder="例如 ABC Furniture Co.">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <span class="field-label">国籍</span>
+        <input type="text" id="m-nationality" placeholder="例如 Germany">
+      </div>
+      <div class="field">
+        <span class="field-label">客户来源</span>
+        <select id="m-source">
+          <option value="展会">展会</option>
+          <option value="谷歌开发信">谷歌开发信</option>
+          <option value="阿里巴巴">阿里巴巴</option>
+          <option value="领英LinkedIn">领英LinkedIn</option>
+          <option value="老客户介绍">老客户介绍</option>
+          <option value="其他">其他（自定义）</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" id="m-source-other-wrap" style="display:none;">
+      <span class="field-label">具体来源</span>
+      <input type="text" id="m-source-other" placeholder="请填写具体来源">
+    </div>
+    <div class="field">
+      <span class="field-label">客户类型</span>
+      <select id="m-type">
+        <option value="贸易商/进口商">贸易商/进口商</option>
+        <option value="生产厂家">生产厂家</option>
+        <option value="经销商/批发商">经销商/批发商</option>
+        <option value="家具厂/工厂直采">家具厂/工厂直采</option>
+        <option value="其他">其他（自定义）</option>
+      </select>
+    </div>
+    <div class="field" id="m-type-other-wrap" style="display:none;">
+      <span class="field-label">具体类型</span>
+      <input type="text" id="m-type-other" placeholder="请填写具体类型">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <span class="field-label">电话号码</span>
+        <input type="text" id="m-phone" placeholder="例如 +49 151 0000000">
+      </div>
+      <div class="field">
+        <span class="field-label">邮箱</span>
+        <input type="text" id="m-email" placeholder="例如 john@abc.com">
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">采购意向</span>
+      <div class="radio-row" id="m-intent-group">
+        <div class="radio-chip active high" data-value="high">大</div>
+        <div class="radio-chip medium" data-value="medium">中</div>
+        <div class="radio-chip low" data-value="low">小</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let customers = [];
+let selectedId = null;
+let editingId = null;
+let modalIntent = 'high';
+let isDirty = false;
+
+document.getElementById('m-source').addEventListener('change', function(){
+  document.getElementById('m-source-other-wrap').style.display = this.value === '其他' ? 'block' : 'none';
+});
+document.getElementById('m-type').addEventListener('change', function(){
+  document.getElementById('m-type-other-wrap').style.display = this.value === '其他' ? 'block' : 'none';
+});
+document.querySelectorAll('#m-intent-group .radio-chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('#m-intent-group .radio-chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    modalIntent = chip.dataset.value;
+  });
+});
+
+function uid(){ return 'c' + Date.now() + Math.random().toString(36).slice(2,7); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+function intentLabel(v){ return v === 'high' ? '大' : v === 'medium' ? '中' : '小'; }
+
+function latestFollowup(cust){
+  if(!cust.followups || cust.followups.length === 0) return null;
+  return [...cust.followups].sort((a,b)=> b.date.localeCompare(a.date))[0];
+}
+function isOverdue(cust){
+  const f = latestFollowup(cust);
+  if(!f || !f.nextDate) return false;
+  return f.nextDate < todayStr();
+}
+
+function openAddModal(){
+  editingId = null;
+  document.getElementById('modal-title').textContent = '新增客户';
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-company').value = '';
+  document.getElementById('m-nationality').value = '';
+  document.getElementById('m-source').value = '展会';
+  document.getElementById('m-source-other').value = '';
+  document.getElementById('m-source-other-wrap').style.display = 'none';
+  document.getElementById('m-type').value = '贸易商/进口商';
+  document.getElementById('m-type-other').value = '';
+  document.getElementById('m-type-other-wrap').style.display = 'none';
+  document.getElementById('m-phone').value = '';
+  document.getElementById('m-email').value = '';
+  modalIntent = 'high';
+  document.querySelectorAll('#m-intent-group .radio-chip').forEach(c=>c.classList.remove('active'));
+  document.querySelector('#m-intent-group .radio-chip[data-value="high"]').classList.add('active');
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function openEditModal(id){
+  const cust = customers.find(c=>c.id===id);
+  if(!cust) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = '编辑客户';
+  document.getElementById('m-name').value = cust.name;
+  document.getElementById('m-company').value = cust.company || '';
+  document.getElementById('m-nationality').value = cust.nationality || '';
+  const sourceOptions = ['展会','谷歌开发信','阿里巴巴','领英LinkedIn','老客户介绍'];
+  if(sourceOptions.includes(cust.source)){
+    document.getElementById('m-source').value = cust.source;
+    document.getElementById('m-source-other-wrap').style.display = 'none';
+  } else {
+    document.getElementById('m-source').value = '其他';
+    document.getElementById('m-source-other').value = cust.source;
+    document.getElementById('m-source-other-wrap').style.display = 'block';
+  }
+  const typeOptions = ['贸易商/进口商','生产厂家','经销商/批发商','家具厂/工厂直采'];
+  if(typeOptions.includes(cust.type)){
+    document.getElementById('m-type').value = cust.type;
+    document.getElementById('m-type-other-wrap').style.display = 'none';
+  } else {
+    document.getElementById('m-type').value = '其他';
+    document.getElementById('m-type-other').value = cust.type;
+    document.getElementById('m-type-other-wrap').style.display = 'block';
+  }
+  document.getElementById('m-phone').value = cust.phone || '';
+  document.getElementById('m-email').value = cust.email || '';
+  modalIntent = cust.intent;
+  document.querySelectorAll('#m-intent-group .radio-chip').forEach(c=>c.classList.remove('active'));
+  document.querySelector(`#m-intent-group .radio-chip[data-value="${cust.intent}"]`).classList.add('active');
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('show'); }
+
+function saveCustomer(){
+  const name = document.getElementById('m-name').value.trim();
+  if(!name){ alert('请填写客户姓名'); return; }
+  const company = document.getElementById('m-company').value.trim();
+  const nationality = document.getElementById('m-nationality').value.trim();
+  let source = document.getElementById('m-source').value;
+  if(source === '其他') source = document.getElementById('m-source-other').value.trim() || '其他';
+  let type = document.getElementById('m-type').value;
+  if(type === '其他') type = document.getElementById('m-type-other').value.trim() || '其他';
+  const phone = document.getElementById('m-phone').value.trim();
+  const email = document.getElementById('m-email').value.trim();
+
+  if(editingId){
+    const cust = customers.find(c=>c.id===editingId);
+    Object.assign(cust, {name, company, nationality, source, type, phone, email, intent: modalIntent});
+  } else {
+    customers.push({
+      id: uid(), name, company, nationality, source, type, phone, email,
+      intent: modalIntent, followups: [], createdAt: Date.now()
+    });
+  }
+  isDirty = true;
+  closeModal();
+  renderTable();
+  if(editingId){ selectCustomer(editingId); }
+}
+
+function deleteCustomer(id){
+  if(!confirm('确认删除该客户吗？此操作不可撤销。')) return;
+  customers = customers.filter(c=>c.id!==id);
+  if(selectedId === id) selectedId = null;
+  isDirty = true;
+  renderTable();
+  renderDetail();
+}
+
+function selectCustomer(id){
+  selectedId = id;
+  renderTable();
+  renderDetail();
+}
+
+function addFollowup(custId){
+  const cust = customers.find(c=>c.id===custId);
+  if(!cust) return;
+  const date = document.getElementById('fu-date').value || todayStr();
+  const note = document.getElementById('fu-note').value.trim();
+  const nextDate = document.getElementById('fu-next').value || '';
+  if(!note){ alert('请填写跟进内容'); return; }
+  cust.followups.push({id: uid(), date, note, nextDate});
+  isDirty = true;
+  renderTable();
+  renderDetail();
+}
+
+function renderTable(){
+  const search = document.getElementById('search').value.trim().toLowerCase();
+  const filterType = document.getElementById('filter-type').value;
+  const filterIntent = document.getElementById('filter-intent').value;
+
+  let filtered = customers.filter(c=>{
+    if(search && !(c.name.toLowerCase().includes(search) || (c.company||'').toLowerCase().includes(search))) return false;
+    if(filterType && c.type !== filterType) return false;
+    if(filterIntent && c.intent !== filterIntent) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  document.getElementById('empty-state').style.display = filtered.length === 0 ? 'block' : 'none';
+
+  filtered.forEach(c=>{
+    const tr = document.createElement('tr');
+    if(c.id === selectedId) tr.classList.add('selected');
+    const f = latestFollowup(c);
+    const overdue = isOverdue(c);
+    tr.innerHTML = `
+      <td class="name-cell">${escapeHtml(c.name)}${c.company ? `<span class="company">${escapeHtml(c.company)}</span>` : ''}</td>
+      <td>${escapeHtml(c.nationality || '—')}</td>
+      <td>${escapeHtml(c.source || '—')}</td>
+      <td>${escapeHtml(c.type || '—')}</td>
+      <td><span class="badge ${c.intent}">${intentLabel(c.intent)}</span></td>
+      <td>${overdue ? '<span class="overdue-dot"></span>' : ''}${f ? escapeHtml(f.date) : '暂无'}</td>
+    `;
+    tr.addEventListener('click', ()=> selectCustomer(c.id));
+    tbody.appendChild(tr);
+  });
+
+  // stats
+  document.getElementById('stat-total').textContent = customers.length;
+  document.getElementById('stat-high').textContent = customers.filter(c=>c.intent==='high').length;
+  document.getElementById('stat-overdue').textContent = customers.filter(isOverdue).length;
+}
+
+function renderDetail(){
+  const panel = document.getElementById('detail-panel');
+  const cust = customers.find(c=>c.id===selectedId);
+  if(!cust){
+    panel.innerHTML = '<div class="detail-placeholder">点击左侧客户查看详情和跟进记录</div>';
+    return;
+  }
+  const sortedFollowups = [...cust.followups].sort((a,b)=> b.date.localeCompare(a.date));
+  panel.innerHTML = `
+    <div class="detail-header">
+      <div>
+        <p class="detail-title">${escapeHtml(cust.name)}</p>
+        <p class="detail-company">${escapeHtml(cust.company || '未填写公司')}</p>
+      </div>
+      <div class="detail-actions">
+        <button class="icon-btn" onclick="openEditModal('${cust.id}')">编辑</button>
+        <button class="icon-btn danger" onclick="deleteCustomer('${cust.id}')">删除</button>
+      </div>
+    </div>
+    <div class="info-grid">
+      <div><div class="k">国籍</div><div class="v">${escapeHtml(cust.nationality || '—')}</div></div>
+      <div><div class="k">客户来源</div><div class="v">${escapeHtml(cust.source || '—')}</div></div>
+      <div><div class="k">客户类型</div><div class="v">${escapeHtml(cust.type || '—')}</div></div>
+      <div><div class="k">采购意向</div><div class="v"><span class="badge ${cust.intent}">${intentLabel(cust.intent)}</span></div></div>
+      <div><div class="k">电话</div><div class="v">${escapeHtml(cust.phone || '—')}</div></div>
+      <div><div class="k">邮箱</div><div class="v">${escapeHtml(cust.email || '—')}</div></div>
+    </div>
+
+    <div class="followup-section-title">添加跟进</div>
+    <div class="followup-form">
+      <div class="followup-form-row">
+        <div style="flex:1;">
+          <label>跟进日期</label><br>
+          <input type="date" id="fu-date" value="${todayStr()}">
+        </div>
+        <div style="flex:1;">
+          <label>下次跟进日期（选填）</label><br>
+          <input type="date" id="fu-next">
+        </div>
+      </div>
+      <label>跟进内容</label>
+      <textarea id="fu-note" rows="2" placeholder="例如：电话沟通了产品规格，客户要求寄样品"></textarea>
+      <button class="btn btn-primary" style="align-self:flex-end;" onclick="addFollowup('${cust.id}')">保存跟进</button>
+    </div>
+
+    <div class="followup-section-title">跟进历史（${sortedFollowups.length}）</div>
+    <div class="followup-list">
+      ${sortedFollowups.length === 0 ? '<div class="followup-empty">暂无跟进记录</div>' :
+        sortedFollowups.map(f => `
+          <div class="followup-item">
+            <span class="followup-date">${escapeHtml(f.date)}</span>${f.nextDate ? `<span class="followup-next">下次跟进: ${escapeHtml(f.nextDate)}</span>` : ''}
+            <div class="followup-note">${escapeHtml(f.note)}</div>
+          </div>
+        `).join('')}
+    </div>
+  `;
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(customers, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = todayStr().replace(/-/g,'');
+  a.href = url;
+  a.download = `crm_backup_${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  isDirty = false;
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  if(customers.length > 0 && !confirm('导入将覆盖当前数据，确认要导入吗？')){
+    event.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data)) throw new Error('格式不正确');
+      customers = data;
+      selectedId = null;
+      isDirty = false;
+      renderTable();
+      renderDetail();
+      alert(`成功导入 ${customers.length} 条客户记录`);
+    } catch(err){
+      alert('导入失败：文件格式不正确');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+window.addEventListener('beforeunload', function(e){
+  if(isDirty){
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+renderTable();
+renderDetail();
+</script>
+</body>
+</html>
