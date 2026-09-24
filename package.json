@@ -1,45 +1,15 @@
 {
-  "name": "wmcrm-desktop",
+  "name": "wmcrm",
   "version": "1.0.0",
-  "description": "WMCRM desktop app built with Electron",
-  "main": "main.js",
+  "description": "外贸客户管理系统（服务器版）",
+  "main": "server.js",
   "author": "",
   "license": "MIT",
   "scripts": {
-    "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "start": "node server.js"
   },
-  "devDependencies": {
-    "electron": "^31.7.7",
-    "electron-builder": "^24.13.3"
-  },
-  "build": {
-    "appId": "com.wmcrm.desktop",
-    "productName": "WMCRM",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "main.js",
-      "QYCRM/**/*",
-      "package.json"
-    ],
-    "win": {
-      "signAndEditExecutable": false,
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
-    }
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "express": "^4.21.2"
   }
 }
