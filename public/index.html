@@ -35,10 +35,12 @@
     background-position: -1px -1px;
     color:var(--ink);
     font-family:var(--sans);
-    min-height:100vh;
-    padding: 28px 16px 60px;
+    height:100vh;
+    overflow:hidden;
+    padding:16px;
+    display:flex;
   }
-  .wrap{ max-width: 1180px; margin:0 auto; }
+  .wrap{ max-width:1180px; width:100%; margin:0 auto; flex:1; min-height:0; display:flex; flex-direction:column; }
 
   .header{
     background:var(--panel); border:1px solid var(--line); border-radius: 4px;
@@ -78,16 +80,18 @@
   .btn-ghost{ background:transparent; }
   .btn[disabled]{ opacity:0.55; cursor:default; }
 
-  .layout{ display:grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items:start; }
-  @media (max-width:900px){ .layout{ grid-template-columns: 1fr; } }
+  .layout{ display:grid; grid-template-columns: 1.3fr 1fr; gap: 16px; flex:1; min-height:0; }
+  @media (max-width:900px){ .layout{ grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
 
-  .panel{ background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow:hidden; }
+  .panel{ background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow:hidden; min-height:0; }
+  .list-panel{ overflow-y:auto; }
+  .detail-panel{ overflow-y:auto; }
 
   table{ width:100%; border-collapse:collapse; font-size:13px; }
   thead th{
     text-align:left; padding:10px 12px; background:var(--paper); color:var(--ink-soft);
     font-size:11.5px; letter-spacing:0.04em; text-transform:uppercase; font-family:var(--mono);
-    border-bottom:1px solid var(--line);
+    border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2;
   }
   tbody td{ padding:11px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }
   tbody tr{ cursor:pointer; transition:background 0.1s; }
@@ -106,7 +110,7 @@
   .empty-state{ padding: 50px 20px; text-align:center; color:var(--ink-soft); font-size:13.5px; }
 
   /* ---- detail panel ---- */
-  .detail-panel{ padding: 20px 22px; min-height: 300px; }
+  .detail-panel{ padding: 20px 22px; }
   .detail-placeholder{ padding:60px 20px; text-align:center; color:var(--ink-soft); font-size:13.5px; border:1px dashed var(--line); border-radius:4px; }
   .detail-header{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
   .detail-title{ font-size:17px; font-weight:700; color:var(--teal-deep); margin:0 0 3px; }
@@ -135,7 +139,7 @@
   .followup-form textarea{ width:100%; padding:8px 10px; font-size:13px; border:1px solid var(--line); border-radius:3px; font-family:var(--sans); resize:vertical; background:#FBFAF7; }
   .followup-form label{ font-size:11.5px; color:var(--ink-soft); }
 
-  .followup-list{ display:flex; flex-direction:column; gap:10px; max-height:280px; overflow-y:auto; }
+  .followup-list{ display:flex; flex-direction:column; gap:10px; }
   .followup-item{ padding:10px 12px; background:var(--paper); border-left:2px solid var(--teal); border-radius:2px; position:relative; }
   .followup-date{ font-family:var(--mono); font-size:11.5px; color:var(--teal); font-weight:600; }
   .followup-next{ font-family:var(--mono); font-size:11px; color:var(--copper); margin-left:8px; }
@@ -170,7 +174,7 @@
   .modal-footer{ display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
   .hint-box{ background:var(--gray-soft); border:1px solid var(--line); border-radius:4px; padding:10px 12px; font-size:12.5px; color:var(--ink-soft); line-height:1.6; }
 
-  .footnote{ text-align:center; font-size: 11.5px; color: var(--ink-soft); margin-top: 18px; font-family: var(--mono); letter-spacing:0.02em; }
+  .footnote{ text-align:center; font-size: 11.5px; color: var(--ink-soft); margin:10px 0 0; font-family: var(--mono); letter-spacing:0.02em; flex:none; }
 </style>
 </head>
 <body>
@@ -217,7 +221,7 @@
   </div>
 
   <div class="layout">
-    <div class="panel">
+    <div class="panel list-panel">
       <table>
         <thead>
           <tr>
@@ -496,6 +500,7 @@ function selectCustomer(id){
   selectedId = id;
   renderTable();
   renderDetail();
+  document.getElementById('detail-panel').scrollTop = 0;
 }
 
 async function addFollowup(custId){
