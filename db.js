@@ -154,6 +154,65 @@ function deleteFollowup(customerId, followupId) {
   return stmtDeleteFollowup.run(followupId, customerId).changes === 1;
 }
 
+// ---------- import ----------
+
+const stmtHasCustomer = db.prepare('SELECT 1 FROM customers WHERE id = ?');
+const stmtHasFollowup = db.prepare('SELECT 1 FROM followups WHERE id = ? AND customer_id = ?');
+const stmtClearCustomers = db.prepare('DELETE FROM customers');
+
+/**
+ * 批量导入客户（含跟进记录），整个过程在一个事务内完成。
+ * mode = 'replace' 先清空全部客户；'merge' 按 id 更新已存在的、插入新的，
+ * 已存在的跟进记录（按 id）跳过，不删除任何数据。
+ * 记录为 API 字段风格：name/company/.../createdAt + followups[{id,date,note,nextDate,createdAt}]
+ */
+function importCustomers(records, mode) {
+  const run = db.transaction(() => {
+    if (mode === 'replace') stmtClearCustomers.run();
+    let inserted = 0;
+    let updated = 0;
+    let followupsAdded = 0;
+    for (const c of records) {
+      if (stmtHasCustomer.get(c.id)) {
+        stmtUpdateCustomer.run({
+          id: c.id,
+          name: c.name,
+          company: c.company,
+          nationality: c.nationality,
+          source: c.source,
+          type: c.type,
+          phone: c.phone,
+          email: c.email,
+          intent: c.intent,
+        });
+        updated += 1;
+      } else {
+        stmtInsertCustomer.run({
+          id: c.id,
+          name: c.name,
+          company: c.company,
+          nationality: c.nationality,
+          source: c.source,
+          type: c.type,
+          phone: c.phone,
+          email: c.email,
+          intent: c.intent,
+          created_at: c.createdAt,
+        });
+        inserted += 1;
+      }
+      for (const f of c.followups) {
+        if (!stmtHasFollowup.get(f.id, c.id)) {
+          stmtInsertFollowup.run(f.id, c.id, f.date, f.note, f.nextDate, f.createdAt);
+          followupsAdded += 1;
+        }
+      }
+    }
+    return { inserted, updated, followupsAdded };
+  });
+  return run();
+}
+
 module.exports = {
   createSession,
   hasSession,
@@ -165,4 +224,5 @@ module.exports = {
   deleteCustomer,
   addFollowup,
   deleteFollowup,
+  importCustomers,
 };

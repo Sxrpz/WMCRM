@@ -168,6 +168,7 @@
   .radio-chip.active.medium{ background:var(--amber-soft); border-color:var(--amber); color:var(--amber); font-weight:600; }
   .radio-chip.active.low{ background:var(--gray-soft); border-color:var(--ink-faint); color:var(--ink-soft); font-weight:600; }
   .modal-footer{ display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+  .hint-box{ background:var(--gray-soft); border:1px solid var(--line); border-radius:4px; padding:10px 12px; font-size:12.5px; color:var(--ink-soft); line-height:1.6; }
 
   .footnote{ text-align:center; font-size: 11.5px; color: var(--ink-soft); margin-top: 18px; font-family: var(--mono); letter-spacing:0.02em; }
 </style>
@@ -211,6 +212,8 @@
     </select>
     <button class="btn btn-primary" onclick="openAddModal()">+ 新增客户</button>
     <button class="btn" onclick="exportData()">导出备份</button>
+    <button class="btn" onclick="importData()">导入备份</button>
+    <input type="file" id="import-file" accept=".json,application/json" style="display:none">
   </div>
 
   <div class="layout">
@@ -307,6 +310,23 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">取消</button>
       <button class="btn btn-primary" id="save-btn" onclick="saveCustomer()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Import Modal ===== -->
+<div class="modal-overlay" id="import-overlay">
+  <div class="modal">
+    <h2>导入备份</h2>
+    <p id="import-summary" style="margin:12px 0; line-height:1.7;"></p>
+    <div class="hint-box">
+      <div><b>合并导入：</b>按 ID 更新已存在的客户、加入新客户，已有的跟进记录保留，不删除任何数据。重复导入同一备份不会产生重复数据。</div>
+      <div style="margin-top:8px;"><b>清空后导入：</b>先删除当前全部客户和跟进记录，再用备份完整替换，相当于恢复备份。</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeImportModal()">取消</button>
+      <button class="btn" id="import-merge-btn" onclick="doImport('merge')">合并导入</button>
+      <button class="btn btn-primary" id="import-replace-btn" onclick="doImport('replace')">清空后导入</button>
     </div>
   </div>
 </div>
@@ -621,6 +641,62 @@ function exportData(){
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// ---------- import ----------
+
+let pendingImport = null;
+
+function importData(){
+  const input = document.getElementById('import-file');
+  input.value = '';  // 选同一个文件也能再次触发 change
+  input.click();
+}
+
+document.getElementById('import-file').addEventListener('change', async function(){
+  const file = this.files[0];
+  if(!file) return;
+  try{
+    const data = JSON.parse(await file.text());
+    if(!Array.isArray(data)) throw new Error('notarray');
+    const valid = data.filter(c => c && String(c.name == null ? '' : c.name).trim());
+    if(valid.length === 0) throw new Error('empty');
+
+    pendingImport = valid;
+    const fuCount = valid.reduce((n,c)=> n + (Array.isArray(c.followups) ? c.followups.length : 0), 0);
+    document.getElementById('import-summary').textContent =
+      `备份文件「${file.name}」包含 ${valid.length} 个客户、${fuCount} 条跟进记录；当前系统有 ${customers.length} 个客户。`;
+    document.getElementById('import-overlay').classList.add('show');
+  }catch(err){
+    const msg = err.message === 'notarray' ? '文件内容不是客户备份格式'
+              : err.message === 'empty' ? '备份文件中没有有效客户数据'
+              : '不是有效的 JSON 文件';
+    alert('导入失败：' + msg);
+  }
+});
+
+function closeImportModal(){
+  pendingImport = null;
+  document.getElementById('import-overlay').classList.remove('show');
+}
+
+async function doImport(mode){
+  if(mode === 'replace'){
+    if(!confirm(`将删除当前全部 ${customers.length} 个客户及其跟进记录，并用备份替换，确定继续吗？`)) return;
+  }
+  const btn = document.getElementById(mode === 'replace' ? 'import-replace-btn' : 'import-merge-btn');
+  btn.disabled = true;
+  try{
+    const r = await apiRequest('POST', '/api/import', { mode, customers: pendingImport });
+    closeImportModal();
+    selectedId = null;
+    await refresh();
+    alert(`导入完成：新增 ${r.inserted} 个客户，更新 ${r.updated} 个，加入 ${r.followupsAdded} 条跟进记录，跳过 ${r.skipped} 条。\n当前共 ${r.total} 个客户。`);
+  }catch(err){
+    alert('导入失败：' + err.message);
+  }finally{
+    btn.disabled = false;
+  }
 }
 
 async function initApp(){

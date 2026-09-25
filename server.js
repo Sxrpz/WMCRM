@@ -14,7 +14,7 @@ if (!PASSWORD) {
 }
 
 const app = express();
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // ---------- helpers ----------
 
@@ -166,6 +166,81 @@ app.delete('/api/customers/:id/followups/:fid', requireAuth, (req, res) => {
     return;
   }
   res.json({ ok: true });
+});
+
+// ---------- import backup ----------
+
+// 备份里的跟进记录统一走这里校验、清洗，规则和手工新增一致
+function normalizeFollowup(raw) {
+  const f = raw || {};
+  const note = cleanStr(f.note, 5000);
+  if (!note) return null;
+  let date = cleanStr(f.date, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = new Date().toISOString().slice(0, 10);
+  let nextDate = cleanStr(f.nextDate, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) nextDate = '';
+  return {
+    id: cleanStr(f.id, 100),
+    date,
+    note,
+    nextDate,
+    createdAt: Number(f.createdAt) || Date.now(),
+  };
+}
+
+app.post('/api/import', requireAuth, (req, res) => {
+  const body = req.body || {};
+  const mode = body.mode === 'replace' ? 'replace' : 'merge';
+  const rawList = Array.isArray(body.customers) ? body.customers : null;
+
+  if (!rawList || rawList.length === 0) {
+    res.status(400).json({ error: '备份文件格式不正确：未找到客户数据' });
+    return;
+  }
+  if (rawList.length > 50000) {
+    res.status(400).json({ error: '客户数量超出限制（5 万）' });
+    return;
+  }
+
+  const records = [];
+  let skipped = 0;
+  const seenCustomerIds = new Set();
+  const seenFollowupIds = new Set();
+
+  for (const raw of rawList) {
+    const data = readCustomerBody(raw || {});
+    if (!data.name) {
+      skipped += 1;
+      continue;
+    }
+    let id = cleanStr(raw && raw.id, 100);
+    if (!id || seenCustomerIds.has(id)) id = uid();
+    seenCustomerIds.add(id);
+
+    const followups = (Array.isArray(raw.followups) ? raw.followups : [])
+      .map(normalizeFollowup)
+      .filter(Boolean)
+      .map((f) => {
+        if (!f.id || seenFollowupIds.has(f.id)) f.id = uid();
+        seenFollowupIds.add(f.id);
+        return f;
+      });
+
+    records.push({
+      id,
+      ...data,
+      createdAt: Number(raw && raw.createdAt) || Date.now(),
+      followups,
+    });
+  }
+
+  if (records.length === 0) {
+    res.status(400).json({ error: '备份文件中没有有效客户（缺少姓名）' });
+    return;
+  }
+
+  const result = db.importCustomers(records, mode);
+  res.json({ ok: true, mode, skipped, ...result, total: db.listCustomers().length });
 });
 
 // ---------- pages & static ----------
