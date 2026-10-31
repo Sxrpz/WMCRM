@@ -21,12 +21,9 @@
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
-    background:var(--paper);
-    background-image:
-      linear-gradient(var(--line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--line) 1px, transparent 1px);
-    background-size: 28px 28px;
-    background-position: -1px -1px;
+    background:
+      linear-gradient(rgba(243,241,236,0.55), rgba(243,241,236,0.55)),
+      url('/images/bg.webp') center/cover no-repeat fixed #5B8DBE;
     color:var(--ink);
     font-family:var(--sans);
     min-height:100vh;
@@ -34,7 +31,12 @@
     padding:20px;
   }
   .card{
-    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    background:rgba(255,255,255,0.93);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border:1px solid rgba(255,255,255,0.65);
+    box-shadow: 0 14px 44px rgba(20,50,90,0.28);
+    border-radius:6px;
     padding:32px 30px; width:100%; max-width:380px; position:relative;
   }
   .corner{ position:absolute; width:14px; height:14px; }

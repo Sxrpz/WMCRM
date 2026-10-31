@@ -1,5 +1,6 @@
 node_modules/
 data/
+data-dev/
 release/
 dist/
 *.log

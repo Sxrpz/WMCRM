@@ -7,6 +7,11 @@ const PASSWORD = process.env.CRM_PASSWORD;
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000; // 30 天
 const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
 const COOKIE_NAME = 'wmcrm_session';
+// 默认 Strict。仅本地开发需要在 iframe / 跨站预览里登录时，才设成 None
+// （浏览器规定 SameSite=None 必须同时带 Secure，localhost 视为安全域名，可正常使用）
+const COOKIE_SAMESITE = ['Strict', 'Lax', 'None'].includes(process.env.COOKIE_SAMESITE)
+  ? process.env.COOKIE_SAMESITE
+  : 'Strict';
 
 if (!PASSWORD) {
   console.error('启动失败：请通过环境变量 CRM_PASSWORD 设置登录密码');
@@ -41,10 +46,10 @@ function setSessionCookie(res, token) {
     `${COOKIE_NAME}=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
-    'SameSite=Strict',
+    `SameSite=${COOKIE_SAMESITE}`,
     `Max-Age=${SESSION_MS / 1000}`,
   ];
-  if (COOKIE_SECURE) attrs.push('Secure');
+  if (COOKIE_SECURE || COOKIE_SAMESITE === 'None') attrs.push('Secure');
   res.append('Set-Cookie', attrs.join('; '));
 }
 
